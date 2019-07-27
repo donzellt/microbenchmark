@@ -35,7 +35,8 @@ public class SerializationBenchmark {
 	// The POJO to be cloned
 	private User user;
 
-	// Serializer tools
+	// Serializing tools
+	
 	private ObjectMapper objectMapper;
 
 	private Gson gson;
@@ -43,6 +44,8 @@ public class SerializationBenchmark {
 	private Kryo kryo;
 
 	private Cloner cloner;
+	
+	// Setup methods
 
 	@Setup(Level.Invocation)
 	public void createPojo() {
@@ -59,52 +62,70 @@ public class SerializationBenchmark {
 		kryo.register(Address.class);
 		cloner = new Cloner();
 	}
+	
+	// Benchmark methods
 
 	@Benchmark
-	public void benchDoNothing(Blackhole bh) {
-		// Do nothing
-		bh.consume(null);
+	public void doNothing(Blackhole bh) {
+		// Methods without cloning to have reference throughput
+		User nonClonedUser = user;
+		bh.consume(nonClonedUser);
+	}
+	
+	@Benchmark
+	public void clone(Blackhole bh) {
+		// Test using the clone methods from pojo
+		User clonedUser = (User) user.clone();
+		bh.consume(clonedUser);
 	}
 
 	@Benchmark
-	public void benchLang3SerializationUtils(Blackhole bh) {
-		bh.consume(SerializationUtils.clone(user));
-	}
-
-	@Benchmark
-	public void benchLangSerializationUtils(Blackhole bh) {
-		bh.consume(org.apache.commons.lang.SerializationUtils.clone(user));
-	}
-
-	@Benchmark
-	public void benchClone(Blackhole bh) {
-		bh.consume((User) user.clone());
-	}
-
-	@Benchmark
-	public void benchConstructor(Blackhole bh) {
+	public void constructor(Blackhole bh) {
+		// Test using the pojo's constructor
 		bh.consume(new User(user));
 	}
 
 	@Benchmark
-	public void benchJackson(Blackhole bh)
+	public void commonLang3(Blackhole bh) {
+		// Test using SerializationUtils.clone from common-lang3
+		User clonedUser = SerializationUtils.clone(user);
+		bh.consume(clonedUser);
+	}
+
+	@Benchmark
+	public void commonLang(Blackhole bh) {
+		// Test using SerializationUtils.clone from common-lang
+		User clonedUser = (User) org.apache.commons.lang.SerializationUtils.clone(user);
+		bh.consume(clonedUser);
+	}
+
+	@Benchmark
+	public void jackson(Blackhole bh)
 			throws JsonParseException, JsonMappingException, JsonProcessingException, IOException {
-		bh.consume(objectMapper.readValue(objectMapper.writeValueAsString(user), User.class));
+		// Test using serialization + deserialization from Jackson lib
+		User clonedUser = objectMapper.readValue(objectMapper.writeValueAsString(user), User.class);
+		bh.consume(clonedUser);
 	}
 
 	@Benchmark
-	public void benchGson(Blackhole bh) {
-		bh.consume(gson.fromJson(gson.toJson(user), User.class));
+	public void gson(Blackhole bh) {
+		// Test using serialization + deserialization from Google Gson lib
+		User clonedUser = gson.fromJson(gson.toJson(user), User.class);
+		bh.consume(clonedUser);
 	}
 
 	@Benchmark
-	public void benchKryo(Blackhole bh) {
-		bh.consume(kryo.copy(user));
+	public void kryo(Blackhole bh) {
+		// Test using copy from Kryo lib
+		User clonedUser = kryo.copy(user);
+		bh.consume(clonedUser);
 	}
 
 	@Benchmark
-	public void benchCloningLib(Blackhole bh) {
-		bh.consume(cloner.deepClone(user));
+	public void cloningLib(Blackhole bh) {
+		// Test using deepcopy specialized lib from Github
+		User clonedUser = cloner.deepClone(user);
+		bh.consume(clonedUser);
 	}
 
 }
